@@ -3,24 +3,8 @@
 echo "Boot.img Extractor for Magisk"
 echo "----------------------------"
 
-# Setup storage access if not already done
-if [ ! -d ~/storage ]; then
-    echo "Setting up storage access..."
-    termux-setup-storage
-    
-    # Wait for user to grant permission
-    echo "Please grant storage permission in the popup"
-    sleep 5
-    
-    # Check if storage was properly setup
-    if [ ! -d ~/storage ]; then
-        echo "Error: Storage access not granted. Please run 'termux-setup-storage' manually and try again."
-        exit 1
-    fi
-fi
-
 # Navigate to internal storage
-cd ~/storage/shared
+cd /sdcard
 
 echo "Searching for payload.bin in internal storage..."
 
