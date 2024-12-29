@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-echo "Boot.img Extractor for Magisk"
-echo "----------------------------"
+echo "Boot Images Extractor for Magisk"
+echo "------------------------------"
 
 # Navigate to internal storage
 cd /sdcard
@@ -73,33 +73,55 @@ if ! command -v "payload-dumper-go" &> /dev/null; then
     cd "$(dirname "$PAYLOAD_PATH")"
 fi
 
-echo "Extracting boot.img from payload.bin..."
-payload-dumper-go -p boot.img "$(basename "$PAYLOAD_PATH")"
+echo "Extracting boot and vendor_boot images from payload.bin..."
+payload-dumper-go -p boot.img,vendor_boot.img "$(basename "$PAYLOAD_PATH")"
 
-# Check if boot.img was extracted
-if [ ! -f "boot.img" ]; then
-    echo "Error: Failed to extract boot.img from payload.bin"
+# Check which images were extracted
+EXTRACTED_FILES=""
+if [ -f "boot.img" ]; then
+    BOOT_HASH=$(sha256sum boot.img | cut -d' ' -f1)
+    EXTRACTED_FILES+="boot.img"
+fi
+if [ -f "vendor_boot.img" ]; then
+    VENDOR_BOOT_HASH=$(sha256sum vendor_boot.img | cut -d' ' -f1)
+    if [ -n "$EXTRACTED_FILES" ]; then
+        EXTRACTED_FILES+=", "
+    fi
+    EXTRACTED_FILES+="vendor_boot.img"
+fi
+
+if [ -z "$EXTRACTED_FILES" ]; then
+    echo "Error: Failed to extract boot images from payload.bin"
     exit 1
 fi
 
-# Calculate SHA256 hash for verification
-BOOT_HASH=$(sha256sum boot.img | cut -d' ' -f1)
-
 echo -e "\nExtraction completed successfully!"
-echo "boot.img has been extracted to: $(pwd)/boot.img"
-echo "SHA256: $BOOT_HASH"
-echo -e "\nNext steps:"
+echo "Extracted files: $EXTRACTED_FILES"
+echo "Location: $(pwd)"
+
+if [ -f "boot.img" ]; then
+    echo -e "\nboot.img SHA256: $BOOT_HASH"
+fi
+if [ -f "vendor_boot.img" ]; then
+    echo -e "vendor_boot.img SHA256: $VENDOR_BOOT_HASH"
+fi
+
+echo -e "\nNext steps for Magisk:"
 echo "1. Open Magisk Manager"
 echo "2. Tap Install → Select and Patch a File"
 echo "3. Navigate to this directory and select boot.img"
-echo -e "\nTo verify the original boot.img integrity later, use:"
-echo "echo \"$BOOT_HASH\" | sha256sum -c -"
+echo -e "\nNote: If Magisk asks for vendor_boot.img, it's also been extracted"
 
-# Create a simple verification script
-cat > verify_boot.sh << EOL
+# Create a verification script
+cat > verify_images.sh << EOL
 #!/data/data/com.termux/files/usr/bin/bash
-echo "${BOOT_HASH}  boot.img" | sha256sum -c -
+if [ -f "boot.img" ]; then
+    echo "${BOOT_HASH}  boot.img" | sha256sum -c -
+fi
+if [ -f "vendor_boot.img" ]; then
+    echo "${VENDOR_BOOT_HASH}  vendor_boot.img" | sha256sum -c -
+fi
 EOL
-chmod +x verify_boot.sh
+chmod +x verify_images.sh
 
-echo -e "\nA verification script 'verify_boot.sh' has been created in the same directory"
+echo -e "\nA verification script 'verify_images.sh' has been created in the same directory"
